@@ -219,7 +219,17 @@ def main():
                 gender = st.selectbox("Gender", ["Select", "Male", "Female", "Other", "Prefer not to say"])
 
             with col3:
-                region = st.selectbox("Region", ["Select", "North America", "South America", "Europe", "Asia", "Africa", "Australia/Oceania", "Other"])
+                regions = [
+                    "Select", "Afghanistan", "Albania", "Algeria", "Argentina", "Australia", "Austria", "Bangladesh",
+                    "Belgium", "Brazil", "Bulgaria", "Canada", "Chile", "China", "Colombia", "Croatia", "Czech Republic",
+                    "Denmark", "Egypt", "Finland", "France", "Germany", "Greece", "Hungary", "Iceland", "India", "Indonesia",
+                    "Ireland", "Israel", "Italy", "Japan", "Jordan", "Kenya", "South Korea", "Lebanon", "Malaysia", "Mexico",
+                    "Morocco", "Netherlands", "New Zealand", "Norway", "Pakistan", "Peru", "Philippines", "Poland", "Portugal",
+                    "Romania", "Russia", "Saudi Arabia", "Singapore", "South Africa", "Spain", "Sweden", "Switzerland",
+                    "Thailand", "Turkey", "Ukraine", "United Arab Emirates", "United Kingdom", "United States", "Vietnam",
+                    "Other"
+                ]
+                region = st.selectbox("Region/Country", regions)
 
             submitted = st.form_submit_button("Continue to App")
 
