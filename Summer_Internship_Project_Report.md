@@ -2,9 +2,9 @@
 
 ## Content-Based Recommendation System using Cosine Similarity
 
-Submitted by: Farha  
+Submitted by: Tamana Farooq Khanday  
 Program: B.Tech (CSE)  
-Session: Summer Internship 2026
+Session: ML Project
 
 Deployed Application: https://movie-recommendation-bqfvhbuotejgna7shxbmx3.streamlit.app/
 
