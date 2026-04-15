@@ -204,6 +204,45 @@ def main():
         layout="wide",
     )
 
+    # User Information Collection
+    if 'user_info' not in st.session_state:
+        st.title("🎬 Welcome to Movie Recommendation System")
+        st.subheader("Please tell us about yourself to personalize your experience")
+
+        with st.form("user_info_form"):
+            col1, col2, col3 = st.columns(3)
+
+            with col1:
+                name = st.text_input("Your Name", placeholder="Enter your name")
+
+            with col2:
+                gender = st.selectbox("Gender", ["Select", "Male", "Female", "Other", "Prefer not to say"])
+
+            with col3:
+                region = st.selectbox("Region", ["Select", "North America", "South America", "Europe", "Asia", "Africa", "Australia/Oceania", "Other"])
+
+            submitted = st.form_submit_button("Continue to App")
+
+            if submitted:
+                if name.strip() and gender != "Select" and region != "Select":
+                    st.session_state.user_info = {
+                        'name': name.strip(),
+                        'gender': gender,
+                        'region': region
+                    }
+                    st.success(f"Welcome {name}! Let's find some great movies for you.")
+                    st.rerun()
+                else:
+                    st.error("Please fill in all fields to continue.")
+
+        return  # Don't show the rest of the app until user info is collected
+
+    # Show user greeting in sidebar
+    user_info = st.session_state.user_info
+    st.sidebar.markdown(f"**👋 Welcome, {user_info['name']}!**")
+    st.sidebar.markdown(f"📍 Region: {user_info['region']}")
+    st.sidebar.markdown("---")
+
     st.title("Content-Based Movie Recommendation System")
     st.caption("Built with cosine similarity over text features and optional TMDB poster integration")
 
