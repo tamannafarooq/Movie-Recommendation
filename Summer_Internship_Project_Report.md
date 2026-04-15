@@ -1,4 +1,4 @@
-# SUMMER INTERNSHIP PROJECT REPORT
+# ML PROJECT
 
 ## Content-Based Recommendation System using Cosine Similarity
 
@@ -14,7 +14,7 @@ GitHub Repository: https://github.com/Farha-n/Movie-recommendation
 
 ## Certificate Page (Template)
 
-This is to certify that the project report titled **"Content-Based Recommendation System using Cosine Similarity"** is the bonafide work carried out by **Farha** during the summer internship period under the guidance of the project mentor and departmental supervision.
+This is to certify that the project report titled **"Content-Based Recommendation System using Cosine Similarity"** is the bonafide work carried out by **Farha** during the ML project period under the guidance of the project mentor and departmental supervision.
 
 Supervisor Signature: ____________________  
 HOD Signature: ____________________  
@@ -24,9 +24,9 @@ Date: ____________________
 
 ## Self Declaration
 
-I hereby declare that the work presented in this report titled **"Content-Based Recommendation System using Cosine Similarity"** is my original work carried out during summer internship training. This report has not been submitted elsewhere for any other academic award.
+I hereby declare that the work presented in this report titled **"Content-Based Recommendation System using Cosine Similarity"** is my original work carried out during ML project training. This report has not been submitted elsewhere for any other academic award.
 
-Name: Farha  
+Name: Tamana Farooq Khanday
 Signature: ____________________  
 Date: ____________________
 
@@ -34,7 +34,7 @@ Date: ____________________
 
 ## Acknowledgement
 
-I would like to express my sincere gratitude to my faculty mentors and internship guides for their valuable support during this project. Their guidance in machine learning concepts, project structuring, and deployment practices helped me complete this work successfully.
+I would like to express my sincere gratitude to my faculty mentors and internship guides for their valuable support during this ML project. Their guidance in machine learning concepts, project structuring, and deployment practices helped me complete this work successfully.
 
 I also thank my peers and family for constant encouragement and feedback during development and testing.
 
