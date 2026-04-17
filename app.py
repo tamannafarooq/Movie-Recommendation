@@ -15,33 +15,41 @@ ARTIFACT_DIR = Path(__file__).parent / "artifacts"
 REQUIRED_COLUMNS = ["title", "genres", "keywords", "overview"]
 
 
+import re
+
+@st.cache_data
 def load_movies(path: Path) -> pd.DataFrame:
     df = pd.read_csv(path)
     missing = [col for col in REQUIRED_COLUMNS if col not in df.columns]
     if missing:
         raise ValueError(f"Missing required columns: {missing}")
-    return df[REQUIRED_COLUMNS].copy()
+    return df.copy()
 
 
+def clean_text(text: str) -> str:
+    normalized = str(text).lower()
+    normalized = re.sub(r"[|,;:\\/\-]+", " ", normalized)
+    normalized = re.sub(r"[^a-z0-9\s]", " ", normalized)
+    normalized = re.sub(r"\s+", " ", normalized).strip()
+    return normalized
+
+
+@st.cache_data
 def prepare_features(df: pd.DataFrame) -> pd.DataFrame:
     prepared = df.copy()
     for col in REQUIRED_COLUMNS:
         prepared[col] = prepared[col].fillna("").astype(str)
 
     prepared["tags"] = (
-        prepared["genres"]
+        prepared["title"]
+        + " "
+        + prepared["genres"]
         + " "
         + prepared["keywords"]
         + " "
         + prepared["overview"]
     )
-    prepared["tags"] = (
-        prepared["tags"]
-        .str.lower()
-        .str.replace(r"[^a-z0-9\s]", " ", regex=True)
-        .str.replace(r"\s+", " ", regex=True)
-        .str.strip()
-    )
+    prepared["tags"] = prepared["tags"].apply(clean_text)
     prepared = prepared[prepared["tags"].str.len() > 0].reset_index(drop=True)
     return prepared
 
@@ -52,11 +60,11 @@ def build_similarity_model(df: pd.DataFrame, method: str, max_features: int):
     else:
         vectorizer = TfidfVectorizer(max_features=max_features, stop_words="english")
 
-    vectors = vectorizer.fit_transform(df["tags"]).toarray()
+    vectors = vectorizer.fit_transform(df["tags"])
     similarity_matrix = cosine_similarity(vectors)
     title_to_index = pd.Series(df.index, index=df["title"].str.lower()).drop_duplicates()
 
-    return similarity_matrix, title_to_index
+    return similarity_matrix, title_to_index, vectorizer, vectors
 
 
 def dataset_signature(df: pd.DataFrame) -> str:
@@ -79,20 +87,30 @@ def load_or_train_model(df: pd.DataFrame, method: str, max_features: int):
         with path.open("rb") as file:
             payload = pickle.load(file)
         if payload.get("signature") == signature:
-            return payload["similarity_matrix"], payload["title_to_index"], True
+            return (
+                payload["similarity_matrix"],
+                payload["title_to_index"],
+                payload["vectorizer"],
+                payload["vectors"],
+                True,
+            )
 
-    similarity_matrix, title_to_index = build_similarity_model(df, method, max_features)
+    similarity_matrix, title_to_index, vectorizer, vectors = build_similarity_model(
+        df, method, max_features
+    )
     with path.open("wb") as file:
         pickle.dump(
             {
                 "signature": signature,
                 "similarity_matrix": similarity_matrix,
                 "title_to_index": title_to_index,
+                "vectorizer": vectorizer,
+                "vectors": vectors,
             },
             file,
         )
 
-    return similarity_matrix, title_to_index, False
+    return similarity_matrix, title_to_index, vectorizer, vectors, False
 
 
 def recommend_movies(
@@ -101,14 +119,27 @@ def recommend_movies(
     similarity_matrix,
     title_to_index: pd.Series,
     top_n: int = 5,
+    vectorizer=None,
+    vectors=None,
+    query: str = "",
 ):
-    movie_index = title_to_index.get(title.lower())
-    if movie_index is None:
-        return pd.DataFrame(columns=["title", "score", "genres"])
+    query = str(query or "").strip()
+    if query:
+        if vectorizer is None or vectors is None:
+            raise ValueError("Vectorizer and vectors are required for query recommendations.")
 
-    distances = list(enumerate(similarity_matrix[movie_index]))
-    ranked = sorted(distances, key=lambda x: x[1], reverse=True)
-    top_matches = ranked[1 : top_n + 1]
+        query_vec = vectorizer.transform([clean_text(query)])
+        distances = list(enumerate(cosine_similarity(query_vec, vectors).flatten()))
+        ranked = sorted(distances, key=lambda x: x[1], reverse=True)
+        top_matches = ranked[: top_n]
+    else:
+        movie_index = title_to_index.get(title.lower())
+        if movie_index is None:
+            return pd.DataFrame(columns=["title", "score", "genres"])
+
+        distances = list(enumerate(similarity_matrix[movie_index]))
+        ranked = sorted(distances, key=lambda x: x[1], reverse=True)
+        top_matches = ranked[1 : top_n + 1]
 
     rows = []
     for idx, score in top_matches:
@@ -124,7 +155,13 @@ def recommend_movies(
 
 
 def parse_genres(genres_text: str):
-    return {g.strip().lower() for g in genres_text.split() if g.strip()}
+    if not isinstance(genres_text, str):
+        return set()
+    return {
+        g.strip().lower()
+        for g in re.split(r"[|,;/]+", genres_text)
+        if g.strip()
+    }
 
 
 def evaluate_recommender(df: pd.DataFrame, similarity_matrix, k: int = 5):
@@ -143,7 +180,10 @@ def evaluate_recommender(df: pd.DataFrame, similarity_matrix, k: int = 5):
         rec_indices = [i for i, _ in ranked]
 
         all_recommended_idx.update(rec_indices)
-        mean_similarity_scores.append(float(np.mean([score for _, score in ranked])) if ranked else 0.0)
+        if ranked:
+            mean_similarity_scores.append(float(np.mean([score for _, score in ranked])))
+        else:
+            mean_similarity_scores.append(0.0)
 
         seed_genres = genre_sets[idx]
         if not seed_genres:
@@ -166,13 +206,14 @@ def evaluate_recommender(df: pd.DataFrame, similarity_matrix, k: int = 5):
 def genre_distribution(df: pd.DataFrame):
     exploded = (
         df["genres"]
-        .str.split()
-        .explode()
         .dropna()
+        .astype(str)
+        .apply(lambda x: re.split(r"[|,;/]+", x))
+        .explode()
         .str.strip()
         .str.lower()
     )
-    return exploded.value_counts().rename_axis("genre").reset_index(name="count")
+    return exploded[exploded != ""].value_counts().rename_axis("genre").reset_index(name="count")
 
 
 @st.cache_data(ttl=3600, show_spinner=False)
@@ -214,11 +255,17 @@ def main():
 
             with col1:
                 name = st.text_input("Your Name", placeholder="Enter your name")
+                age = st.number_input("Your Age", min_value=13, max_value=100, value=25, step=1)
 
             with col2:
                 gender = st.selectbox("Gender", ["Select", "Male", "Female", "Other", "Prefer not to say"])
+                profession = st.text_input("Your Profession", placeholder="e.g., Student, Engineer, Teacher")
 
             with col3:
+                qualification = st.selectbox("Highest Qualification", [
+                    "Select", "High School", "Associate Degree", "Bachelor's Degree", 
+                    "Master's Degree", "Doctorate", "Other"
+                ])
                 regions = [
                     "Select", "Afghanistan", "Albania", "Algeria", "Argentina", "Australia", "Austria", "Bangladesh",
                     "Belgium", "Brazil", "Bulgaria", "Canada", "Chile", "China", "Colombia", "Croatia", "Czech Republic",
@@ -234,10 +281,14 @@ def main():
             submitted = st.form_submit_button("Continue to App")
 
             if submitted:
-                if name.strip() and gender != "Select" and region != "Select":
+                if (name.strip() and gender != "Select" and region != "Select" and 
+                    qualification != "Select" and profession.strip() and age >= 13):
                     st.session_state.user_info = {
                         'name': name.strip(),
+                        'age': age,
                         'gender': gender,
+                        'profession': profession.strip(),
+                        'qualification': qualification,
                         'region': region
                     }
                     st.success(f"Welcome {name}! Let's find some great movies for you.")
@@ -250,6 +301,9 @@ def main():
     # Show user greeting in sidebar
     user_info = st.session_state.user_info
     st.sidebar.markdown(f"**👋 Welcome, {user_info['name']}!**")
+    st.sidebar.markdown(f"🎂 Age: {user_info['age']}")
+    st.sidebar.markdown(f"💼 Profession: {user_info['profession']}")
+    st.sidebar.markdown(f"🎓 Qualification: {user_info['qualification']}")
     st.sidebar.markdown(f"📍 Region: {user_info['region']}")
     st.sidebar.markdown("---")
 
@@ -280,7 +334,7 @@ def main():
     else:
         tmdb_api_key = ""
 
-    similarity_matrix, title_to_index, loaded_from_cache = load_or_train_model(
+    similarity_matrix, title_to_index, vectorizer, vectors, loaded_from_cache = load_or_train_model(
         data,
         vectorizer_method,
         max_features,

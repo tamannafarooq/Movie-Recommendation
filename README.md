@@ -5,8 +5,10 @@ A complete standalone ML project that recommends similar movies using text featu
 ## Key Features
 
 - Content-based recommendations using cosine similarity
+- Improved text preprocessing and unified movie tags from title, genres, keywords, and overview
 - Switch between CountVectorizer and TF-IDF from the sidebar
 - Local artifact caching for faster repeated runs
+- User onboarding form with demographic context displayed in sidebar
 - Optional TMDB poster preview cards
 - Multi-tab app: Recommend, Evaluate, Explore Data, Viva Notes
 - Offline evaluation dashboard (Genre Match@K, Coverage, Mean Similarity)
