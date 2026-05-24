@@ -14,7 +14,7 @@ GitHub Repository:https://github.com/tamannafarooq/Movie-Recommendation
 
 ## Certificate Page (Template)
 
-This is to certify that the project report titled **"Content-Based Recommendation System using Cosine Similarity"** is the bonafide work carried out by **TamanaFarooq** during the ML project period under the guidance of the project mentor and departmental supervision.
+This is to certify that the project report titled **"Content-Based Recommendation System using Cosine Similarity"** is the bonafide work carried out by **Tamana Farooq** during the ML project period under the guidance of the project mentor and departmental supervision.
 
 Supervisor Signature: ____________________  
 HOD Signature: ____________________  
